@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Env files
+.env
+.env.*
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+*.env
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# AWS SAM
+.aws-sam/
+
+# Azure
+\.python_packages/

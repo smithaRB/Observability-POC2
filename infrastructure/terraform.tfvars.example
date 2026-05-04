@@ -1,0 +1,17 @@
+region = "us-east-1"
+environment = "dev"
+ecr_repository = "incident-analyzer"
+ecs_cluster_name = "incident-analyzer-cluster"
+ecs_service_name = "incident-analyzer-service"
+task_cpu = 512
+task_memory = 1024
+desired_count = 1
+dynatrace_base_url = "https://your-tenant.live.dynatrace.com"
+anthropic_api_key = "YOUR_ANTHROPIC_KEY"
+servicenow_instance = "your-instance"
+servicenow_username = "your-username"
+servicenow_password = "your-password"
+slack_webhook_url = "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+claude_model = "claude-3-sonnet-20240229"
+confidence_threshold = 0.8
+default_hours_back = 24

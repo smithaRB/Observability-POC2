@@ -1,0 +1,77 @@
+name: AWS Terraform Docker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1
+      IMAGE_TAG: latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-actions
+
+      - name: Terraform Init
+        run: terraform -chdir=infrastructure init
+
+      - name: Terraform Apply
+        run: |
+          terraform -chdir=infrastructure apply -auto-approve \
+            -var="region=${{ env.AWS_REGION }}" \
+            -var="environment=${{ secrets.ENVIRONMENT }}" \
+            -var="ecr_repository=${{ secrets.ECR_REPOSITORY }}" \
+            -var="ecs_cluster_name=${{ secrets.ECS_CLUSTER_NAME }}" \
+            -var="ecs_service_name=${{ secrets.ECS_SERVICE_NAME }}" \
+            -var="dynatrace_base_url=${{ secrets.DYNATRACE_BASE_URL }}" \
+            -var="anthropic_api_key=${{ secrets.ANTHROPIC_API_KEY }}" \
+            -var="servicenow_instance=${{ secrets.SERVICENOW_INSTANCE }}" \
+            -var="servicenow_username=${{ secrets.SERVICENOW_USERNAME }}" \
+            -var="servicenow_password=${{ secrets.SERVICENOW_PASSWORD }}" \
+            -var="slack_webhook_url=${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -var="claude_model=${{ secrets.CLAUDE_MODEL }}" \
+            -var="confidence_threshold=${{ secrets.CONFIDENCE_THRESHOLD }}" \
+            -var="default_hours_back=${{ secrets.DEFAULT_HOURS_BACK }}"
+
+      - name: Get ECR repository URL
+        id: ecr
+        run: |
+          cd infrastructure
+          echo "ecr_url=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
+          echo "cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+          echo "service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.ecr.outputs.ecr_url }}:latest
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecr.outputs.cluster_name }} \
+            --service ${{ steps.ecr.outputs.service_name }} \
+            --force-new-deployment

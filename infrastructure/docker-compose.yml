@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  incident-analyzer:
+    build: .
+    env_file:
+      - .env
+    command: python main.py
+    restart: unless-stopped
